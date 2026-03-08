@@ -1,0 +1,8 @@
+venv/
+embeddings/chroma_db/
+embeddings/embeddings_matrix.npy
+embeddings/pca_model.pkl
+embeddings/gmm_model.pkl
+__pycache__/
+*.pyc
+.env
