@@ -117,7 +117,7 @@ Flushes all cache entries and resets all stats to zero.
 
 ## Design Decisions
 
-### Part 1 — Preprocessing
+### Part 1 — Preprocessing (`preprocess.py`)
 
 - Headers already decomposed into CSV columns — only `body` column is cleaned
 - **Four quote styles** handled: `>`, `:`, `->`, `}` — all four confirmed present in corpus
@@ -125,6 +125,15 @@ Flushes all cache entries and resets all stats to zero.
 - **Subject line prepended** as topic anchor — densest semantic signal per post, improves embedding quality
 - No lowercasing, stemming, or stopword removal — `all-MiniLM-L6-v2` is trained on cased subword tokens; stripping morphology degrades quality
 - Documents under 50 chars post-cleaning flagged as `short_doc=True` and excluded from cluster centroid fitting
+
+### Part 1 — Embedding (`embedder.py`)
+
+- **Model:** `all-MiniLM-L6-v2` — 384-dim embeddings, fast on CPU/GPU, strong retrieval quality for short-to-medium texts
+- Chosen over `all-mpnet-base-v2` (768-dim) because: lower dimensionality means faster cache lookups at inference; quality gap is minimal for retrieval tasks; ChromaDB storage is proportionally smaller
+- **Vector store:** ChromaDB (persistent, local) — supports metadata filtering essential for cluster-scoped cache lookup; chosen over FAISS which requires manual index serialization and has no native metadata support
+- **Batch size 128** — empirically stable sweet spot; larger batches waste memory padding short documents to max sequence length
+- **ID uniqueness fix:** `file_id` alone is not unique across all 20 newsgroups — the same numeric ID appears in multiple categories. Fixed by prefixing `category_fileid` (e.g. `sci.space_51127`). Without this fix, 3,667 documents silently overwrote each other in ChromaDB
+- Short documents included in the index as valid search targets but excluded from GMM centroid fitting
 
 ### Part 2 — Fuzzy Clustering
 
